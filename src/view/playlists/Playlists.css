@@ -1,0 +1,149 @@
+.playlists {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.playlists-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.playlists-controls .btn {
+  margin-right: 10px;
+}
+
+.search-input {
+  width: 250px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.playlist-item {
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #f9f9f9;
+  transition: background 0.3s;
+}
+
+.playlist-item:hover {
+  background: #e0e0e0;
+}
+
+.playlist-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  opacity: 0.8;
+}
+
+.no-results {
+  font-size: 18px;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.active-playlist {
+  margin: 30px 0;
+  background: #f1f1f1;
+  padding: 20px;
+}
+.active-title {
+  font-weight: bold;
+  color: #007bff;
+  text-align: center;
+}
+.playlist-title {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.playlist-description {
+  font-size: 16px;
+  color: #555;
+}
+
+.add-tracks {
+  padding: 20px;
+}
+
+.modal-title {
+  margin-bottom: 15px;
+  font-size: 22px;
+}
+
+.create-playlist,
+.add-tracks {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.add-track-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 600px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.track-list li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.modal-content h2 {
+  text-align: center;
+}
+.modal-content .navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+.track-list-modal {
+  width: auto;
+}
+.track-list-modal .track-item {
+  min-width: 0;
+}
