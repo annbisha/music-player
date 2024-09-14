@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useLoginMutation } from "../../services/apiSlice";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "../../services/authSlice";
 import "./Login.css";
 
 const Login = () => {
@@ -9,6 +11,7 @@ const Login = () => {
   const [notification, setNotification] = useState(null);
   const [loginMutation, { isLoading }] = useLoginMutation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,8 +23,7 @@ const Login = () => {
           message: "Invalid login or password.",
         });
       } else {
-        localStorage.setItem("token", data);
-        localStorage.setItem("login", login);
+        dispatch(setCredentials({ token: data, user: login }));
         setNotification({ type: "success", message: "Login successful!" });
         setTimeout(() => navigate("/"), 2000);
       }

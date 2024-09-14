@@ -1,19 +1,20 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { resetPlayer } from "../../store/reducers/playerReducer";
 import { stopTrack } from "../../store/thunks/playerThunks";
+import { clearCredentials } from "../../services/authSlice";
 import "./Header.css";
-import { useDispatch } from "react-redux";
 
 const Header = () => {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-  const userName = localStorage.getItem("login");
   const dispatch = useDispatch();
 
+  const token = useSelector((state) => state.auth.token);
+  const userName = useSelector((state) => state.auth.user);
+
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("login");
+    dispatch(clearCredentials());
 
     dispatch({ type: "RESET_STORE" });
     dispatch(resetPlayer());

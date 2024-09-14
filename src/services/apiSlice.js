@@ -1,31 +1,39 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-const graphqlBaseQuery = fetchBaseQuery({
-  baseUrl: "http://player.node.ed.asmer.org.ua/graphql",
-  prepareHeaders: (headers) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-    return headers;
-  },
-});
+const selectToken = (state) => state.auth.token;
 
-const fileBaseQuery = fetchBaseQuery({
-  baseUrl: "http://player.node.ed.asmer.org.ua",
-  prepareHeaders: (headers) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-    return headers;
-  },
-});
+const graphqlBaseQuery = (args, api, extraOptions) => {
+  const token = selectToken(api.getState());
+  return fetchBaseQuery({
+    url: "",
+    method: "POST",
+    baseUrl: "http://player.node.ed.asmer.org.ua/graphql",
+    prepareHeaders: (headers) => {
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    },
+  })(args, api, extraOptions);
+};
+
+const fileBaseQuery = (args, api, extraOptions) => {
+  const token = selectToken(api.getState());
+  return fetchBaseQuery({
+    baseUrl: "http://player.node.ed.asmer.org.ua",
+    prepareHeaders: (headers) => {
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      return headers;
+    },
+  })(args, api, extraOptions);
+};
 
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: (args, api, extraOptions) => {
-    if (args.url.startsWith("/track")) {
+    if (args.url && args.url.startsWith("/track")) {
       return fileBaseQuery(args, api, extraOptions);
     }
     return graphqlBaseQuery(args, api, extraOptions);
@@ -33,8 +41,6 @@ export const apiSlice = createApi({
   endpoints: (builder) => ({
     login: builder.mutation({
       query: ({ login, password }) => ({
-        url: "",
-        method: "POST",
         body: {
           query: `
               query {
@@ -47,8 +53,6 @@ export const apiSlice = createApi({
     }),
     register: builder.mutation({
       query: ({ login, password }) => ({
-        url: "",
-        method: "POST",
         body: {
           query: `
               mutation {
@@ -76,8 +80,6 @@ export const apiSlice = createApi({
       query: ({ searchTerm = "", sortOrder = "new", limit = 10, skip = 0 }) => {
         const sortValue = sortOrder === "new" ? -1 : 1;
         return {
-          url: "",
-          method: "POST",
           body: {
             query: `
           query GetTracks($query: String!) {
@@ -104,8 +106,6 @@ export const apiSlice = createApi({
       query: ({ searchTerm = "", sortOrder = "new", limit = 10, skip = 0 }) => {
         const sortValue = sortOrder === "new" ? -1 : 1;
         return {
-          url: "",
-          method: "POST",
           body: {
             query: `
               query GetPlaylists($query: String!) {
@@ -133,8 +133,6 @@ export const apiSlice = createApi({
     }),
     playlistUpsert: builder.mutation({
       query: (playlist) => ({
-        url: "",
-        method: "POST",
         body: {
           query: `
               mutation PlaylistUpsert($playlist: PlaylistInput!) {

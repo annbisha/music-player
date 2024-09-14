@@ -124,13 +124,19 @@ const Playlists = () => {
   };
 
   const handlePlaylistClick = (playlist) => {
+    dispatch(setPlaylistThunk([]));
+    dispatch(setTrackThunk(0));
     dispatch(setActivePlaylistThunk(playlist));
-    dispatch(setPlaylistThunk(playlist.tracks));
     if (playlist.tracks.length > 0) {
+      dispatch(setPlaylistThunk(playlist.tracks));
       dispatch(setTrackThunk({ track: playlist.tracks[0], index: 0 }));
     }
   };
-
+  useEffect(() => {
+    if (activePlaylist) {
+      dispatch(setPlaylistThunk(activePlaylist.tracks));
+    }
+  }, [activePlaylist, dispatch]);
   const handlePlay = (track, index) => {
     const trackIndex = activePlaylist.tracks.findIndex(
       (t) => t._id === track._id
@@ -195,6 +201,9 @@ const Playlists = () => {
       </p>
     );
   }
+  const handleReorder = (reorderedTracks) => {
+    setSelectedTrackIds(reorderedTracks);
+  };
 
   const sortedPlaylists = playlists.slice().sort((a, b) => {
     if (sortOrder === "new") {
@@ -241,6 +250,7 @@ const Playlists = () => {
             onSearch={(term) => handlePlaylistSearch(activePlaylist._id, term)}
             sortOrder="none"
             onSort={() => {}}
+            onReorder={handleReorder}
           />
         </div>
       )}

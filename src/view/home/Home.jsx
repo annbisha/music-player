@@ -77,6 +77,9 @@ const Home = () => {
   if (error) {
     return <p className="error">Error fetching tracks: {error.message}</p>;
   }
+  const handleReorder = (reorderedTracks) => {
+    setTracks(reorderedTracks);
+  };
 
   return (
     <div className="home">
@@ -93,6 +96,7 @@ const Home = () => {
           onSearch={setSearchTerm}
           sortOrder={sortOrder}
           onSort={handleSortChange}
+          onReorder={handleReorder}
         />
       </div>
       <button

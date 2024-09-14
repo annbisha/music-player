@@ -39,29 +39,15 @@ const playerSlice = createSlice({
     setActivePlaylist(state, action) {
       state.activePlaylist = action.payload;
     },
-    nextTrack(state) {
-      if (state.playlist.length > 0) {
-        state.playlistIndex = (state.playlistIndex + 1) % state.playlist.length;
-        state.track = state.playlist[state.playlistIndex];
-      }
-    },
 
-    prevTrack(state) {
-      if (state.playlist.length > 0) {
-        state.playlistIndex =
-          (state.playlistIndex - 1 + state.playlist.length) %
-          state.playlist.length;
-        state.track = state.playlist[state.playlistIndex];
-      }
-    },
     setCurrentTime(state, action) {
       state.currentTime = action.payload;
     },
-    setVolume(state, action) {
-      state.volume = action.payload;
-    },
     setDuration(state, action) {
       state.duration = action.payload;
+    },
+    setVolume(state, action) {
+      state.volume = action.payload;
     },
     resetPlayer(state) {
       return initialState;
@@ -76,8 +62,6 @@ export const {
   setTrack,
   setPlaylist,
   setActivePlaylist,
-  nextTrack,
-  prevTrack,
   setCurrentTime,
   setVolume,
   setDuration,
