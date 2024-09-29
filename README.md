@@ -7,5 +7,5 @@ Users can register and login. After that users can upload their tracks, create a
 React, Redux, CSS, JSX, React Router, RTK query, GraphQL
 ## For Local Testing:
 ```bash
-npm ci
-npm start
+npm/yarn ci
+npm/yarn start
