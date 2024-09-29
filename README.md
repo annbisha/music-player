@@ -6,6 +6,6 @@ Users can register and login. After that users can upload their tracks, create a
 ## Technologies Used:
 React, Redux, CSS, JSX, React Router, RTK query, GraphQL
 ## For Local Testing:
-`npm/yarn ci
-npm/yarn start
-`
+```bash
+npm ci
+npm start
