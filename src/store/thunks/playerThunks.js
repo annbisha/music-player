@@ -10,117 +10,186 @@ import {
   setActivePlaylist,
 } from "../reducers/playerReducer";
 
-const BASE_URL = "http://player.node.ed.asmer.org.ua/";
 const audio = new Audio();
+
+const getTrackUrl = (track) => track?.url || "";
+
+const getAbsoluteTrackUrl = (trackUrl) =>
+  new URL(trackUrl, window.location.origin).href;
 
 const handleTrackEnd = (dispatch, getState) => {
   const { playlist, playlistIndex } = getState().player;
-  if (playlist.length > 0) {
-    const nextIndex = (playlistIndex + 1) % playlist.length;
-    const nextTrack = playlist[nextIndex];
-    dispatch(setTrackThunk({ track: nextTrack, index: nextIndex }));
+
+  if (!playlist?.length) {
+    return;
   }
+
+  const nextIndex = (playlistIndex + 1) % playlist.length;
+  const nextTrack = playlist[nextIndex];
+
+  dispatch(
+    setTrackThunk({
+      track: nextTrack,
+      index: nextIndex,
+    })
+  );
 };
 
-export const playTrack = () => (dispatch, getState) => {
+export const playTrack = () => async (dispatch, getState) => {
   const { track, currentTime, volume } = getState().player;
+  const trackUrl = getTrackUrl(track);
 
-  if (track) {
-    if (audio.src !== `${BASE_URL}${track.url}`) {
-      audio.src = `${BASE_URL}${track.url}`;
-      audio.load();
-    }
-    audio.currentTime = currentTime;
-    audio.volume = volume;
-    audio
-      .play()
-      .then(() => {
-        dispatch(play());
-        audio.ontimeupdate = () => {
-          dispatch(setCurrentTime(audio.currentTime));
-        };
-        audio.onended = () => {
-          handleTrackEnd(dispatch, getState);
-        };
-      })
-      .catch((error) => console.error("Playback error:", error));
+  if (!trackUrl) {
+    return;
+  }
+
+  const absoluteTrackUrl = getAbsoluteTrackUrl(trackUrl);
+
+  if (audio.src !== absoluteTrackUrl) {
+    audio.src = trackUrl;
+    audio.load();
+  }
+
+  audio.currentTime = currentTime || 0;
+  audio.volume = volume ?? 1;
+
+  audio.ontimeupdate = () => {
+    dispatch(setCurrentTime(audio.currentTime || 0));
+  };
+
+  audio.onended = () => {
+    handleTrackEnd(dispatch, getState);
+  };
+
+  try {
+    await audio.play();
+    dispatch(play());
+  } catch (error) {
+    console.error("Playback error:", error);
   }
 };
 
 export const pauseTrack = () => (dispatch) => {
-  dispatch(setCurrentTime(audio.currentTime));
   audio.pause();
+
+  dispatch(setCurrentTime(audio.currentTime || 0));
   dispatch(pause());
 };
 
 export const stopTrack = () => (dispatch) => {
   audio.pause();
-  audio.src = "";
   audio.currentTime = 0;
+
+  dispatch(setCurrentTime(0));
   dispatch(stop());
 };
 
 export const setTrackThunk =
   ({ track, index }) =>
-  (dispatch, getState) => {
-    const { playlist } = getState().player;
+  (dispatch) => {
+    const trackUrl = getTrackUrl(track);
 
-    if (playlist && playlist.length > 0) {
-      dispatch(setCurrentTime(0));
-      dispatch(setTrack({ track, index }));
-
-      const tempAudio = new Audio(`${BASE_URL}${track.url}`);
-      tempAudio.onerror = () => {
-        dispatch(stopTrack());
-        alert("Track not working");
-      };
-
-      tempAudio.onloadedmetadata = () => {
-        dispatch(setDuration(tempAudio.duration));
-        dispatch(playTrack());
-      };
+    if (!trackUrl) {
+      return;
     }
+
+    audio.pause();
+    audio.src = trackUrl;
+    audio.currentTime = 0;
+    audio.load();
+
+    dispatch(setCurrentTime(0));
+    dispatch(setTrack({ track, index }));
+
+    audio.onerror = () => {
+      console.error("Track could not be loaded:", trackUrl);
+      dispatch(stopTrack());
+    };
+
+    audio.onloadedmetadata = () => {
+      const trackDuration = Number.isFinite(audio.duration)
+        ? audio.duration
+        : 0;
+
+      dispatch(setDuration(trackDuration));
+      dispatch(playTrack());
+    };
+
+    audio.ontimeupdate = () => {
+      dispatch(setCurrentTime(audio.currentTime || 0));
+    };
   };
 
 export const changeTrack = (index) => (dispatch, getState) => {
   const { playlist } = getState().player;
-  if (playlist && playlist[index]) {
-    const track = playlist[index];
-    dispatch(setTrackThunk({ track, index }));
+
+  if (!playlist?.length || !playlist[index]) {
+    return;
   }
+
+  dispatch(
+    setTrackThunk({
+      track: playlist[index],
+      index,
+    })
+  );
 };
 
 export const setPlaylistThunk = (tracks) => (dispatch) => {
-  dispatch(setPlaylist([]));
-  dispatch(setPlaylist(tracks));
+  dispatch(setPlaylist(tracks || []));
 };
 
 export const nextTrackThunk = () => (dispatch, getState) => {
   const { playlist, playlistIndex } = getState().player;
-  if (playlist.length > 0) {
-    const newIndex = (playlistIndex + 1) % playlist.length;
-    const nextTrack = playlist[newIndex];
-    dispatch(setTrackThunk({ track: nextTrack, index: newIndex }));
+
+  if (!playlist?.length) {
+    return;
   }
+
+  const nextIndex = (playlistIndex + 1) % playlist.length;
+  const nextTrack = playlist[nextIndex];
+
+  dispatch(
+    setTrackThunk({
+      track: nextTrack,
+      index: nextIndex,
+    })
+  );
 };
 
 export const prevTrackThunk = () => (dispatch, getState) => {
   const { playlist, playlistIndex } = getState().player;
-  if (playlist.length > 0) {
-    const newIndex = (playlistIndex - 1 + playlist.length) % playlist.length;
-    const prevTrack = playlist[newIndex];
-    dispatch(setTrackThunk({ track: prevTrack, index: newIndex }));
+
+  if (!playlist?.length) {
+    return;
   }
+
+  const prevIndex = (playlistIndex - 1 + playlist.length) % playlist.length;
+  const previousTrack = playlist[prevIndex];
+
+  dispatch(
+    setTrackThunk({
+      track: previousTrack,
+      index: prevIndex,
+    })
+  );
 };
 
 export const setCurrentTimeThunk = (time) => (dispatch) => {
-  audio.currentTime = time;
-  dispatch(setCurrentTime(time));
+  const safeTime = Number.isFinite(time) ? time : 0;
+
+  if (audio.src && Number.isFinite(audio.duration)) {
+    audio.currentTime = Math.min(safeTime, audio.duration);
+  }
+
+  dispatch(setCurrentTime(safeTime));
 };
 
 export const setVolumeThunk = (volume) => (dispatch) => {
-  audio.volume = volume;
-  dispatch(setVolume(volume));
+  const safeVolume = Math.min(1, Math.max(0, Number(volume)));
+
+  audio.volume = safeVolume;
+  dispatch(setVolume(safeVolume));
 };
 
 export const setActivePlaylistThunk = (playlist) => (dispatch) => {

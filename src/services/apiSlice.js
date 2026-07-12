@@ -1,158 +1,290 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
 
-const selectToken = (state) => state.auth.token;
+const USERS_KEY = "music-player-demo-users";
+const TRACKS_KEY = "music-player-demo-tracks";
+const PLAYLISTS_KEY = "music-player-demo-playlists";
+const TOKEN_KEY = "token";
 
-const graphqlBaseQuery = (args, api, extraOptions) => {
-  const token = selectToken(api.getState());
-  return fetchBaseQuery({
-    url: "",
-    method: "POST",
-    baseUrl: "http://player.node.ed.asmer.org.ua/graphql",
-    prepareHeaders: (headers) => {
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return headers;
+const demoUsers = [
+  {
+    _id: "demo-user",
+    login: "demo",
+    password: "demo123",
+  },
+];
+
+const demoTracks = [
+  {
+    _id: "track-1",
+    url: "/demo-tracks/dreams.mp3",
+    id3: {
+      artist: "Demo Artist",
+      title: "Dreams",
+      year: 2026,
     },
-  })(args, api, extraOptions);
+  },
+  {
+    _id: "track-2",
+    url: "/demo-tracks/summer.mp3",
+    id3: {
+      artist: "Demo Artist",
+      title: "Summer",
+      year: 2026,
+    },
+  },
+  {
+    _id: "track-3",
+    url: "/demo-tracks/night.mp3",
+    id3: {
+      artist: "Demo Artist",
+      title: "Night Drive",
+      year: 2026,
+    },
+  },
+];
+
+const demoPlaylists = [
+  {
+    _id: "playlist-1",
+    name: "My Favorites",
+    description: "Demo playlist",
+    tracks: [demoTracks[0], demoTracks[1]],
+  },
+];
+
+const getStoredData = (key, fallback) => {
+  try {
+    const storedValue = localStorage.getItem(key);
+
+    if (!storedValue) {
+      localStorage.setItem(key, JSON.stringify(fallback));
+      return fallback;
+    }
+
+    return JSON.parse(storedValue);
+  } catch (error) {
+    console.error(`Failed to read ${key}:`, error);
+    return fallback;
+  }
 };
 
-const fileBaseQuery = (args, api, extraOptions) => {
-  const token = selectToken(api.getState());
-  return fetchBaseQuery({
-    baseUrl: "http://player.node.ed.asmer.org.ua",
-    prepareHeaders: (headers) => {
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
-      }
-      return headers;
-    },
-  })(args, api, extraOptions);
+const saveData = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
 };
+
+const createId = (prefix) =>
+  `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export const apiSlice = createApi({
   reducerPath: "api",
-  baseQuery: (args, api, extraOptions) => {
-    if (args.url && args.url.startsWith("/track")) {
-      return fileBaseQuery(args, api, extraOptions);
-    }
-    return graphqlBaseQuery(args, api, extraOptions);
-  },
+  baseQuery: fakeBaseQuery(),
+
+  tagTypes: ["Tracks", "Playlists"],
+
   endpoints: (builder) => ({
     login: builder.mutation({
-      query: ({ login, password }) => ({
-        body: {
-          query: `
-              query {
-                login(login: "${login}", password: "${password}")
-              }
-            `,
-        },
-      }),
-      transformResponse: (response) => response.data.login,
+      async queryFn({ login, password }) {
+        const users = getStoredData(USERS_KEY, demoUsers);
+
+        const user = users.find(
+          (item) => item.login === login && item.password === password
+        );
+
+        if (!user) {
+          return {
+            error: {
+              status: 401,
+              data: {
+                message: "Invalid login or password.",
+              },
+            },
+          };
+        }
+
+        const token = `demo-token-${user._id}`;
+
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem("login", user.login);
+
+        return {
+          data: token,
+        };
+      },
     }),
+
     register: builder.mutation({
-      query: ({ login, password }) => ({
-        body: {
-          query: `
-              mutation {
-                createUser(login: "${login}", password: "${password}") {
-                  _id
-                }
-              }
-            `,
-        },
-      }),
+      async queryFn({ login, password }) {
+        const users = getStoredData(USERS_KEY, demoUsers);
+
+        const userExists = users.some((user) => user.login === login);
+
+        if (userExists) {
+          return {
+            data: {
+              data: {
+                createUser: null,
+              },
+            },
+          };
+        }
+
+        const newUser = {
+          _id: createId("user"),
+          login,
+          password,
+        };
+
+        saveData(USERS_KEY, [...users, newUser]);
+
+        return {
+          data: {
+            data: {
+              createUser: {
+                _id: newUser._id,
+              },
+            },
+          },
+        };
+      },
     }),
+
     uploadTrack: builder.mutation({
-      query: (file) => {
-        const formData = new FormData();
-        formData.append("track", file);
+      async queryFn(file) {
+        if (!file) {
+          return {
+            error: {
+              status: 400,
+              data: {
+                message: "Please select a file.",
+              },
+            },
+          };
+        }
+
+        const tracks = getStoredData(TRACKS_KEY, demoTracks);
+
+        const newTrack = {
+          _id: createId("track"),
+          url: URL.createObjectURL(file),
+          id3: {
+            artist: "Uploaded Track",
+            title: file.name.replace(/\.[^/.]+$/, ""),
+            year: new Date().getFullYear(),
+          },
+        };
+
+        saveData(TRACKS_KEY, [...tracks, newTrack]);
+
         return {
-          url: "/track",
-          method: "POST",
-          body: formData,
+          data: newTrack,
         };
       },
-      transformResponse: (response) => response,
+
+      invalidatesTags: ["Tracks"],
     }),
+
     getTracks: builder.query({
-      query: ({ searchTerm = "", sortOrder = "new", limit = 10, skip = 0 }) => {
-        const sortValue = sortOrder === "new" ? -1 : 1;
-        return {
-          body: {
-            query: `
-          query GetTracks($query: String!) {
-            TrackFind(query: $query) {
-              url
-              _id
-              id3 {
-                artist
-                title
-                year
-              }
-            }
+      async queryFn({
+        searchTerm = "",
+        sortOrder = "new",
+        limit = 10,
+        skip = 0,
+      } = {}) {
+        let tracks = getStoredData(TRACKS_KEY, demoTracks);
+
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+
+        if (normalizedSearch) {
+          tracks = tracks.filter((track) => {
+            const title = track.id3?.title?.toLowerCase() || "";
+            const artist = track.id3?.artist?.toLowerCase() || "";
+
+            return (
+              title.includes(normalizedSearch) ||
+              artist.includes(normalizedSearch)
+            );
+          });
+        }
+
+        tracks = [...tracks].sort((firstTrack, secondTrack) => {
+          if (sortOrder === "old") {
+            return firstTrack._id.localeCompare(secondTrack._id);
           }
-        `,
-            variables: {
-              query: `[{ "id3.title": { "$regex": "${searchTerm}", "$options": "i" } }, { "sort": [{ "_id": ${sortValue}}], "limit": [${limit}], "skip": [${skip}] }]`,
-            },
-          },
-        };
-      },
-      transformResponse: (response) => response.data.TrackFind,
-    }),
-    getPlaylists: builder.query({
-      query: ({ searchTerm = "", sortOrder = "new", limit = 10, skip = 0 }) => {
-        const sortValue = sortOrder === "new" ? -1 : 1;
+
+          return secondTrack._id.localeCompare(firstTrack._id);
+        });
+
         return {
-          body: {
-            query: `
-              query GetPlaylists($query: String!) {
-                PlaylistFind(query: $query) {
-                  _id
-                  name
-                  description
-                  tracks {
-                    _id
-                    url
-                    id3 {
-                      title
-                    }
-                  }
-                }
-              }
-            `,
-            variables: {
-              query: `[{"name": { "$regex": "${searchTerm}", "$options": "i" } }, { "sort": [{ "_id": ${sortValue}}], "limit": [${limit}], "skip": [${skip}] }]`,
-            },
-          },
+          data: tracks.slice(skip, skip + limit),
         };
       },
-      transformResponse: (response) => response.data.PlaylistFind,
+
+      providesTags: ["Tracks"],
     }),
+
+    getPlaylists: builder.query({
+      async queryFn({
+        searchTerm = "",
+        sortOrder = "new",
+        limit = 10,
+        skip = 0,
+      } = {}) {
+        let playlists = getStoredData(PLAYLISTS_KEY, demoPlaylists);
+
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+
+        if (normalizedSearch) {
+          playlists = playlists.filter((playlist) =>
+            playlist.name.toLowerCase().includes(normalizedSearch)
+          );
+        }
+
+        playlists = [...playlists].sort((firstPlaylist, secondPlaylist) => {
+          if (sortOrder === "old") {
+            return firstPlaylist._id.localeCompare(secondPlaylist._id);
+          }
+
+          return secondPlaylist._id.localeCompare(firstPlaylist._id);
+        });
+
+        return {
+          data: playlists.slice(skip, skip + limit),
+        };
+      },
+
+      providesTags: ["Playlists"],
+    }),
+
     playlistUpsert: builder.mutation({
-      query: (playlist) => ({
-        body: {
-          query: `
-              mutation PlaylistUpsert($playlist: PlaylistInput!) {
-                PlaylistUpsert(playlist: $playlist) {
-                _id
-                  name
-                  description
-                  tracks {
-                    _id
-                    url
-                  }
-                }
-              }
-            `,
-          variables: {
-            playlist,
-          },
-        },
-      }),
-      transformResponse: (response) => response.data.upsertPlaylist,
+      async queryFn(playlist) {
+        const playlists = getStoredData(PLAYLISTS_KEY, demoPlaylists);
+
+        let savedPlaylist;
+
+        if (playlist._id) {
+          savedPlaylist = { ...playlist };
+
+          const updatedPlaylists = playlists.map((item) =>
+            item._id === playlist._id ? savedPlaylist : item
+          );
+
+          saveData(PLAYLISTS_KEY, updatedPlaylists);
+        } else {
+          savedPlaylist = {
+            ...playlist,
+            _id: createId("playlist"),
+            tracks: playlist.tracks || [],
+          };
+
+          saveData(PLAYLISTS_KEY, [...playlists, savedPlaylist]);
+        }
+
+        return {
+          data: savedPlaylist,
+        };
+      },
+
+      invalidatesTags: ["Playlists"],
     }),
   }),
 });
@@ -164,5 +296,4 @@ export const {
   useGetTracksQuery,
   useGetPlaylistsQuery,
   usePlaylistUpsertMutation,
-  useAddTrackToPlaylistMutation,
 } = apiSlice;
